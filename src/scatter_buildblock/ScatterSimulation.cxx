@@ -177,24 +177,20 @@ process_data_for_view_segment_num(const ViewSegmentNumbers& vs_num)
     Viewgram<float> viewgram =
             this->output_proj_data_sptr->get_empty_viewgram(vs_num.view_num(), vs_num.segment_num());
 #ifdef STIR_OPENMP
-#pragma omp parallel for reduction(+:total_scatter) schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
 #endif
-
     for (int i = 0; i < static_cast<int>(all_bins.size()); ++i)
     {
         const Bin bin = all_bins[i];
-        const double scatter_ratio = scatter_estimate(bin);
+        double scatter_ratio;
+#    pragma omp critical //(ScatterSimulationByBin_process_data_for_view_segment_numYYY)
+	{
+	scatter_ratio = scatter_estimate(bin);
 
-#if defined STIR_OPENMP 
-#  if _OPENMP >= 201107
-#    pragma omp atomic write
-#  else
-#    pragma omp critical(ScatterSimulationByBin_process_data_for_view_segment_num)
-#  endif
-#endif
         viewgram[bin.axial_pos_num()][bin.tangential_pos_num()] =
                 static_cast<float>(scatter_ratio);
-        total_scatter += static_cast<double>(scatter_ratio);
+	}
+        //total_scatter += static_cast<double>(scatter_ratio);
     } // end loop over bins
 
     if (this->output_proj_data_sptr->set_viewgram(viewgram) == Succeeded::no)
