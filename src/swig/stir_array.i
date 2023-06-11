@@ -158,7 +158,9 @@ namespace stir
 	throw std::invalid_argument(str);
       } 
     }
-  }
+}
+
+
 #endif
 
   %extend Array{
@@ -168,6 +170,16 @@ namespace stir
       return num_dimensions;
     }
   }
+
+#ifndef SWIGMATLAB
+  %extend Array {
+    Array & operator+= (const Array& c)
+      {
+        (*$self) += c;
+        return *$self;
+      }
+  }
+#endif
 
 #ifdef SWIGMATLAB
   %extend Array {

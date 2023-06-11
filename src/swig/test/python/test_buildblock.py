@@ -92,7 +92,10 @@ def test_Array2D():
     a2[ind]=4
     assert a2[ind]==4
     assert a2[(4,5)]==4
-    #assert a2[ind[1]][ind[2]]==4
+    a=FloatArray2D(a2)
+    a2 += a
+    assert a2[ind]==8
+    assert a2[ind[1]][ind[2]]==4
     # let's set a whole row
     #a1=a2[4]
     #a1[5]=66;
@@ -124,6 +127,8 @@ def test_Array3D():
     a3[ind]=9
     assert a3[(4,5,6)]==9
     assert a3.find_max()==9
+    a3 += a3
+    assert a3[ind]==18
 
 def test_FloatVoxelsOnCartesianGrid():
     origin=FloatCartesianCoordinate3D(0,1,6)
@@ -147,6 +152,9 @@ def test_FloatVoxelsOnCartesianGrid():
     a3.fill(2)
     # shouldn't change image constructed from array
     assert abs(image[ind]-1.4)<.001
+    a3 += a3
+    assert abs(image[ind]-1.4*2)<.001
+    assert False
 
 def test_zoom_image():
     # create test image
