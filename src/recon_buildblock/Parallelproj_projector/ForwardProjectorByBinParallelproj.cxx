@@ -33,7 +33,10 @@
 #else
 #include "parallelproj_c.h"
 #endif
-
+#include "stir/CPUTimer.h"
+#include "stir/HighResWallClockTimer.h"
+#include <chrono>
+#include <iostream>
 START_NAMESPACE_STIR
 
 //////////////////////////////////////////////////////////
@@ -152,8 +155,12 @@ void
 ForwardProjectorByBinParallelproj::
 set_input(const DiscretisedDensity<3,float> & density)
 {
+    CPUTimer timer;
+    HighResWallClockTimer wc_timer;
     ForwardProjectorByBin::set_input(density);
 
+    timer.start(); wc_timer.start();
+    auto start = std::chrono::steady_clock::now();
     if (this->_restrict_to_cylindrical_FOV)
       {
         const float radius = this->_proj_data_info_sptr->get_scanner_sptr()->get_inner_ring_radius();
@@ -220,6 +227,11 @@ set_input(const DiscretisedDensity<3,float> & density)
                   static_cast<long long>(_projected_data_sptr->get_proj_data_info_sptr()->size_all()),
                   _helper->imgdim.data());
 #endif
+    timer.stop(); wc_timer.stop();
+    auto stop = std::chrono::steady_clock::now();
+    std::cerr << "PP:get_input Timing: " + std::to_string(timer.value())
+              << "\t" << std::to_string(wc_timer.value())
+              << "\t" << std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count()<< std::endl;
     info("done", 2);
 
     _projected_data_sptr->release_data_ptr();
