@@ -19,8 +19,8 @@
 #ifndef __stir_listmode_CListRecordGERDF8_H__
 #define __stir_listmode_CListRecordGERDF8_H__
 
-// disable when matching with STIR coordinates
-#define MATCH_PETTOOLBOX
+// a temp value to flip coordinates. Do not use.
+// #define MATCH_PETTOOLBOX
 
 #include "stir/listmode/CListRecord.h"
 #include "stir/listmode/ListTime.h"
