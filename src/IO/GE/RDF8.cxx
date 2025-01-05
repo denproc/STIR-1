@@ -2,8 +2,8 @@
    RDF8.cxx
 
    Author:      Benjamin A. Thomas
-
-   Copyright 2017, 2023 Institute of Nuclear Medicine, University College London.
+   Author:      Kris Thielemans
+   Copyright 2017, 2023, 2025 Institute of Nuclear Medicine, University College London.
 
    This file is part of STIR.
 
@@ -29,7 +29,6 @@
 #include "stir/error.h"
 #endif
 #ifndef HAVE_BOOST_FILESYSTEM
-#include <stdio.h> // for tmpnam
 #include "stir/FilePath.h"
 #endif
 
@@ -334,37 +333,33 @@ bool CRDF8EXAM::WriteFile(const path_t srcFile, const path_t dstFile)
     stir::error("Refusing to overwrite existing output file!");
 #endif
 
-#ifdef HAVE_BOOST_FILESYSTEM
-  path_t tmpFile = boost::filesystem::unique_path();
-  try
-  {
-    fs::copy(srcFile, tmpFile);
-  }
-  catch (fs::filesystem_error &e)
-  {
-#ifdef HAVE_BOOST_LOG
-    BOOST_LOG_TRIVIAL(error) << "Could not copy " << srcFile << " to " << tmpFile;
-#else
-    stir::error("Could not copy " + tostring(srcFile) + " to " + tostring(tmpFile));
-#endif
-    return false;
-  }
-#else
-  // TODO tmpnam is considered insecure.
-  path_t tmpFile = tmpnam(NULL);
+  // copy contents
   {
     std::ifstream  src(tostring(srcFile).c_str(), std::ios::binary);
-    std::ofstream  dst(tostring(tmpFile).c_str(), std::ios::binary);
-
-    if (!src || !dst)
-      stir::error("Could not copy " + tostring(srcFile) + " to " + tostring(tmpFile));
+    std::ofstream  dst(tostring(dstFile).c_str(), std::ios::binary);
 
     dst << src.rdbuf();
-  }
+    if (!src || !dst)
+      {
+#ifdef HAVE_BOOST_LOG
+	BOOST_LOG_TRIVIAL(error) << "Could not copy " << srcFile << " to " << dstFile;
+	return false;
+#else
+      stir::error("Could not copy " + tostring(srcFile) + " to " + tostring(dstFile));
 #endif
+      }
+  }
 
-  std::fstream fout(tostring(tmpFile).c_str(), std::ios::in | std::ios::out | std::ios::binary);
-  if (fout.is_open())
+  std::fstream fout(tostring(dstFile).c_str(), std::ios::in | std::ios::out | std::ios::binary);
+  if (!fout.is_open())
+    {
+#ifdef HAVE_BOOST_LOG
+      BOOST_LOG_TRIVIAL(error) << "Could not reopen " << dstFile << " for updating";
+      return false;
+#else
+      stir::error("Could not reopen " + tostring(dstFile) + " for updating");
+#endif
+    }
   {
     fout.seekp(_offsets.petExamStructOffset);
     fout << _patientID;
@@ -419,29 +414,20 @@ bool CRDF8EXAM::WriteFile(const path_t srcFile, const path_t dstFile)
     fout.write((const char *)(&_isotopeHasPromptGamma), sizeof(_isotopeHasPromptGamma));
     fout.write((const char *)(&_spares), sizeof(_spares));
 
+    if (!fout)
+      {
+#ifdef HAVE_BOOST_LOG
+	BOOST_LOG_TRIVIAL(error) << "Error writing to " << dstFile;
+#else
+	stir::error("Error writing to " + tostring(dstFile));
+#endif
+	return false;
+      }
+
     //int pos = fout.tellg();
     fout.close();
     //fs::resize_file(tmpFile, pos);
   }
-
-#ifdef HAVE_BOOST_FILESYSTEM
-  try
-  {
-    fs::rename(tmpFile, dstFile);
-  }
-  catch (fs::filesystem_error &e)
-  {
-#ifdef HAVE_BOOST_LOG
-    BOOST_LOG_TRIVIAL(error) << "Could not copy" << tmpFile << " to " << dstFile;
-#else
-    stir::error("Could not copy" + tostring(tmpFile) + " to " + tostring(dstFile));
-#endif
-    return false;
-  }
-#else
- if (!rename(tmpFile.c_str(), dstFile.c_str()))
-   stir::error("Could not copy" + tostring(tmpFile) + " to " + tostring(dstFile));
-#endif
   return true;
 }
 
