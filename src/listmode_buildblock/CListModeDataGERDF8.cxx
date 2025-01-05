@@ -61,7 +61,12 @@ CListModeDataGERDF8(const std::string& listmode_filename)
   {
     nmtools::IO::ge::CRDF8ACQPARAMS acq_params_header;
     acq_params_header.Read(listmode_filename);
-    local_proj_data_info_sptr->set_bed_position_horizontal(acq_params_header.acq_scan_params._tableLocation);
+    // tableLocation is in LPS for HFS, so we need a minus sign to go to STIR  coordinates.
+    // We choose an offset such that bed_position becomes the z-coordinate
+    // of the first plane in DICOM images reconstructed on the console.
+    const float STIR_bed_pos =
+      -acq_params_header.acq_scan_params._tableLocation - (scanner_sptr->get_num_rings() - 1) * scanner_sptr->get_ring_spacing();
+    local_proj_data_info_sptr->set_bed_position_horizontal(STIR_bed_pos);
 #if 0 // HDF5 code uses
     local_proj_data_info_sptr->set_bed_position_horizontal(
       this->read_dataset_int32("/HeaderData/AcqParameters/LandmarkParameters/absTableLongitude")
